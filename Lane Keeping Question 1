@@ -1,0 +1,83 @@
+# ____________________________________________---LANE KEEPING Q1---_______________________________________________
+
+import numpy as np
+from scipy.integrate import solve_ivp
+import matplotlib.pyplot as plt
+
+# ---------------------------------------------------------------------------------------------------------------
+
+# System dynamics as a function for equations 2.1(a-c)
+def system_dynamics(t, z):
+    """
+               [v*cos(theta)]
+     g(t,z) =  [v*sin(theta)]
+               [v*tan(u)/L]
+    :param t: Time (s)
+    :param z: An array that stores equations for x, y and pose
+    :return:
+    """
+    theta = z[2]
+    return [velocity*np.cos(theta),
+            velocity*np.sin(theta),
+            velocity*np.tan(steer_ang)/length]
+
+# ____________________________________________---INITIAL VARIABLES---_____________________________________________
+
+velocity = 5.0
+length = 2.3
+
+# a negative angle is required in order to have a clockwise direction
+steer_ang = np.deg2rad(-2.0)
+t_final = 2.0
+ini_x = 0.0
+ini_y = 0.3                                  # convert 30cm into 0.3m
+
+# a positive angle is required in order to have a clockwise direction
+ini_theta = np.deg2rad(5.0)
+ini_z = [ini_x, ini_y, ini_theta]
+num_points = 1000
+
+# ________________________________________________---SIMULATION---________________________________________________
+
+solution = solve_ivp(system_dynamics,
+                     [0, t_final],
+                     ini_z,
+                     t_eval=np.linspace(0, t_final, num_points))
+time = solution.t
+x_orientation = solution.y[0]
+y_orientation = solution.y[1]
+theta_orientation = solution.y[2]
+
+# ___________________________________________________---GRAPHS---_________________________________________________
+
+# x against time
+plt.plot(time, x_orientation.T)
+plt.grid()
+plt.xlabel('Time (s)')
+plt.ylabel('x - Orientation (m)')
+plt.savefig("Question(1.1)(x).svg", format="svg")
+plt.show()
+
+# y against time
+plt.plot(time, y_orientation.T)
+plt.grid()
+plt.xlabel('Time (s)')
+plt.ylabel('y - Orientation (m)')
+plt.savefig("Question1(1.1)(y).svg", format="svg")
+plt.show()
+
+# theta against time
+plt.plot(time, theta_orientation.T)
+plt.grid()
+plt.ylabel('Angle Theta (rad)')
+plt.xlabel('Time (s)')
+plt.savefig("Question1(1.1)(theta).svg", format="svg")
+plt.show()
+
+# y against x
+plt.plot(x_orientation, y_orientation)
+plt.grid()
+plt.ylabel('y - Orientation (m)')
+plt.xlabel('x - Orientation (m)')
+plt.savefig("Question1(1.2)(x-y).svg", format="svg")
+plt.show()

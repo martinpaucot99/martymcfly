@@ -1,0 +1,171 @@
+# ___________________________________________---LANE KEEPING Q2.2---_____________________________________________
+
+import numpy as np
+from scipy.integrate import solve_ivp
+import matplotlib.pyplot as plt
+
+# ________________________________________________---CAR CLASS---________________________________________________
+
+class Car:
+
+    def __init__(self, length=2.3, velocity=5., dis=0, x=0., y=0., pose=0.):
+        """
+        :param length: The length between the two axles of the car
+        :param velocity: The velocity of the car (m/s)
+        :param dis: The additive dis (rad)
+        :param x: The x-position of the car (m)
+        :param y: The y-position of the car (m)
+        :param pose: The angle of the car from the y-setpoint (rad)
+        """
+        self.__length = length
+        self.__velocity = velocity
+        self.__dis = dis
+        self.__x = x
+        self.__y = y
+        self.__pose = pose
+
+    # __________________________________---SIMULATION t=0 to t=0+dt---___________________________________________
+
+    def move(self, steer_ang, dt):
+        """
+        :param steer_ang: The steering angle of the car (rad)
+        :param dt: dt is a time that is added to 0 s to produce the final time of the simulation (s)
+        :return:
+        """
+
+        # System dynamics as a function for equations 3.11(a-c)
+        def bicycle_model(t, z):
+            """
+                       [v * cos(theta)]
+             g(t,z) =  [v * sin(theta)]
+                       [v * tan(u + w)/L]
+            :param t: Time (s)
+            :param z: An array that stores equations for x, y and pose
+            :return:
+            """
+            theta = z[2]
+            return [self.__velocity*np.cos(theta),
+                    self.__velocity*np.sin(theta),
+                    self.__velocity*np.tan(steer_ang+self.__dis)/self.__length]
+
+        ini_z = [self.__x, self.__y, self.__pose]
+
+        # __________________________________---SIMULATION DYNAMICAL SYSTEM---____________________________________
+
+        solution = solve_ivp(bicycle_model,
+                             [0, dt],
+                             ini_z)
+        self.__x = solution.y[0][-1]
+        self.__y = solution.y[1][-1]
+        self.__pose = solution.y[2][-1]
+
+    def x(self):
+        return self.__x
+
+    def y(self):
+        return self.__y
+
+    def theta(self):
+        return self.__pose
+
+# ______________________________________________---PD CONTROLLER---______________________________________________
+
+class PdController:
+
+    def __init__(self, kp, kd, ts):
+        """
+        :param kp: The proportional gain
+        :param kd: The derivative gain
+        :param ts: The sampling time
+        """
+        self.__kp = kp
+        self.__kd = kd/ts
+        self.__ts = ts
+        self.__previous_error = None
+
+    def control(self, y, y_set_point=0):
+        """
+        :param y: The y-position of the car
+        :param y_set_point: The desired y-position of the car
+        :return:
+        """
+        error = y_set_point - y
+        ctrl_a = self.__kp*error
+
+        if self.__previous_error is not None:
+            ctrl_a += self.__kd*(error - self.__previous_error)
+
+        self.__previous_error = error
+        return ctrl_a
+
+# ____________________________________________---INITIAL VARIABLES---____________________________________________
+
+sampling_rate = 40
+t_final = 50
+ini_x = 0
+ini_y = 0.3
+ini_theta = np.deg2rad(0)
+# a positive angle is required in order to have a counter-clockwise direction
+ini_dis = np.deg2rad(1)
+samp_p = 1/sampling_rate
+ticks = sampling_rate*t_final
+
+# ________________________________________________---SIMULATION---_______________________________________________
+
+# Simulation of vehicle with kp = 0.1 and kd = 0.01
+andy = Car(x=ini_x, y=ini_y, pose=ini_theta, dis=ini_dis)
+pid_1 = PdController(kp=0.1, kd=0.01, ts=samp_p)
+cache_y = np.array([andy.y()])
+cache_x = np.array([andy.x()])
+for k in range(ticks):
+    ctrl_a = pid_1.control(andy.y())
+    andy.move(ctrl_a, samp_p)
+    cache_y = np.vstack((cache_y, [andy.y()]))
+    cache_x = np.vstack((cache_x, [andy.x()]))
+
+# Simulation of vehicle with kp = 0.1 and kd = 0.1
+andy_2 = Car(x=ini_x, y=ini_y, pose=ini_theta, dis=ini_dis)
+pid_2 = PdController(kp=0.1, kd=0.09, ts=samp_p)
+cache_y_2 = np.array([andy_2.y()])
+cache_x_2 = np.array([andy_2.x()])
+for k in range(ticks):
+    ctrl_a_2 = pid_2.control(andy_2.y())
+    andy_2.move(ctrl_a_2, samp_p)
+    cache_y_2 = np.vstack((cache_y_2, [andy_2.y()]))
+    cache_x_2 = np.vstack((cache_x_2, [andy_2.x()]))
+
+# Simulation of vehicle with kp = 0.1 and kd = 0.4
+andy_3 = Car(x=ini_x, y=ini_y, pose=ini_theta, dis=ini_dis)
+pid_3 = PdController(kp=0.1, kd=0.3, ts=samp_p)
+cache_y_3 = np.array([andy_3.y()])
+cache_x_3 = np.array([andy_3.x()])
+for k in range(ticks):
+    ctrl_a_3 = pid_3.control(andy_3.y())
+    andy_3.move(ctrl_a_3, samp_p)
+    cache_y_3 = np.vstack((cache_y_3, [andy_3.y()]))
+    cache_x_3 = np.vstack((cache_x_3, [andy_3.x()]))
+
+# Simulation of vehicle with kp = 0.1 and kd = 0.7
+andy_4 = Car(x=ini_x, y=ini_y, pose=ini_theta, dis=ini_dis)
+pid_4 = PdController(kp=0.1, kd=0.65, ts=samp_p)
+cache_y_4 = np.array([andy_4.y()])
+cache_x_4 = np.array([andy_4.x()])
+for k in range(ticks):
+    ctrl_a_4 = pid_4.control(andy_4.y())
+    andy_4.move(ctrl_a_4, samp_p)
+    cache_y_4 = np.vstack((cache_y_4, [andy_4.y()]))
+    cache_x_4 = np.vstack((cache_x_4, [andy_4.x()]))
+
+# ___________________________________________________---GRAPHS---________________________________________________
+
+# Graphs of the (x, y) Orientation
+plt.plot(cache_x, cache_y, label="K$_d$ = 0.01")
+plt.plot(cache_x_2, cache_y_2, label="K$_d$ = 0.09")
+plt.plot(cache_x_3, cache_y_3, label="K$_d$ = 0.3")
+plt.plot(cache_x_4, cache_y_4, label="K$_d$ = 0.65")
+plt.grid()
+plt.ylabel('y - Orientation (m)')
+plt.xlabel('x - Orientation (m)')
+plt.legend()
+plt.savefig("Question(2.2)(Kp-Kd).svg", format="svg")
+plt.show()
